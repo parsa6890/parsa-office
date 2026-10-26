@@ -73,12 +73,12 @@ class Conversation(models.Model):
 
 			if participants.count() != 2:
 				raise ValidationError(
-					"A private conversation must have exactly two participants."
+					"گفتگوی خصوصی باید دقیقاً دو شرکت‌کننده داشته باشد."
 				)
 
-		def save(self, *args, **kwargs):
-			self.full_clean()
-			super().save(*args, **kwargs)
+	def save(self, *args, **kwargs):
+		self.full_clean()
+		super().save(*args, **kwargs)
 
 
 class Message(models.Model):

@@ -14,4 +14,5 @@ urlpatterns = [
     path('edit_profile/<int:pk>', views.EditProfileView.as_view(), name='edit_profile'),
     path('users/', views.UsersListView.as_view(), name='users'),
     path('users/<int:pk>', views.UserDetailView.as_view(), name='user_detail'),
+    path('task/<int:pk>/status/', views.update_task_status, name='update_task_status'),
 ]

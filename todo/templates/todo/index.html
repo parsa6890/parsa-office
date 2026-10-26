@@ -1,70 +1,115 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="UTF-8">
-	<title>لیست وظایف</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% block title %}داشبورد وظایف{% endblock %}
+{% block breadcrumb %}وظایف{% endblock %}
 
-	{% if messages %}
-	    {% for message in messages %}
-	        <div style="
-	            padding:10px;
-	            margin-bottom:10px;
-	            {% if 'success' in message.tags %}
-	                background:#d4edda; color:#155724;
-	            {% elif 'error' in message.tags %}
-	                background:#f8d7da; color:#721c24;
-	            {% endif %}
-	        ">
-	            {{ message }}
-	        </div>
-	    {% endfor %}
-	{% endif %}
+{% block content %}
+<div class="page__header">
+    <div>
+        <h1 class="page__title">داشبورد وظایف</h1>
+        <p class="page__subtitle">مدیریت و پیگیری وظایف تیم</p>
+    </div>
+    <div class="page__actions">
+        <a href="{% url 'create_task' %}" class="btn btn--primary">
+            <i class="ti ti-plus"></i>
+            وظیفه جدید
+        </a>
+    </div>
+</div>
 
-	{% if user.is_authenticated %}
-		<h2>Welcome {{ user.username }}</h2>
-		<a href="{% url 'logout' %}">خروج از حساب</a>
-	{% else %}
-		<a href="{% url 'login' %}">ورود</a>
-		|
-		<a href="{% url 'register' %}">ثبت‌نام</a>
-	{% endif %}
-	<br>
+<!-- آمار -->
+<div class="stats">
+    <div class="stat">
+        <div class="stat__icon"><i class="ti ti-checklist"></i></div>
+        <div class="stat__value">{{ stats.total|default:0 }}</div>
+        <div class="stat__label">کل وظایف</div>
+    </div>
+    <div class="stat stat--warning">
+        <div class="stat__icon"><i class="ti ti-clock"></i></div>
+        <div class="stat__value">{{ stats.pending|default:0 }}</div>
+        <div class="stat__label">در حال بررسی</div>
+    </div>
+    <div class="stat stat--info">
+        <div class="stat__icon"><i class="ti ti-progress"></i></div>
+        <div class="stat__value">{{ stats.in_progress|default:0 }}</div>
+        <div class="stat__label">در حال انجام</div>
+    </div>
+    <div class="stat stat--success">
+        <div class="stat__icon"><i class="ti ti-circle-check"></i></div>
+        <div class="stat__value">{{ stats.done|default:0 }}</div>
+        <div class="stat__label">انجام شده</div>
+    </div>
+</div>
 
-	<table border="1">
-		<tr>
-			<th>ویرایش وظیفه</th>
-			<th>حذف وظیفه</th>
-			<th>وضعیت</th>
-			<th>عنوان</th>
-			<th>توضیح</th>
-		</tr>
-			{% for status, tasks in grouped_todos.items %}
-				{% for task in tasks %}
-					<tr>
-						<td>
-						  <a href="{% url 'edit_task' task.id %}"
-						     style="color: blue;">
-						     ویرایش
-						  </a>
-						</td>
-						<td>
-						  <a href="{% url 'delete_task' task.id %}"
-						     style="color: red;">
-						     حذف
-						  </a>
-						</td>
-						<td>{{ status }}</td>
-						<td>{{ task.title }}</td>
-						<td>{{ task.description }}</td>
-					</tr>
-				{% endfor %}
-			{% endfor %}
-	</table>
-	|
-	<a href="{% url 'create_task' %}">اضافه کردن وظیفه جدید</a>
-	|
-	<a href="{% url 'profile' %}">پروفایل من</a>
-</body>
-</html>
+<!-- کانبان -->
+<div class="kanban">
+
+    {% for status, tasks in grouped_todos.items %}
+    <div class="kanban-column" data-status="{{ status }}">
+        <div class="kanban-column__header">
+            <span class="kanban-column__dot"></span>
+            <span class="kanban-column__title">
+                {% if status == 'pending' %}در حال بررسی
+                {% elif status == 'in_progress' %}در حال انجام
+                {% else %}انجام شده{% endif %}
+            </span>
+            <span class="kanban-column__count">{{ tasks|length }}</span>
+        </div>
+
+        <div class="kanban-column__body">
+            {% for task in tasks %}
+            <div class="kanban-card"
+                 draggable="true"
+                 data-id="{{ task.id }}"
+                 data-status="{{ status }}"
+                 data-priority="{{ task.priority }}">
+
+                <div class="kanban-card__header">
+                    {% if task.priority == 3 %}
+                        <span class="badge badge--danger">اولویت بالا</span>
+                    {% elif task.priority == 2 %}
+                        <span class="badge badge--warning">متوسط</span>
+                    {% else %}
+                        <span class="badge badge--success">پایین</span>
+                    {% endif %}
+
+                    {% if task.due_date %}
+                    <span class="kanban-card__date">
+                        <i class="ti ti-calendar" style="font-size:13px"></i>
+                        {{ task.due_date|date:"Y/m/d" }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="kanban-card__title">{{ task.title }}</div>
+
+                {% if task.description %}
+                <div class="kanban-card__desc">{{ task.description }}</div>
+                {% endif %}
+
+                <div class="kanban-card__footer">
+                    <span class="avatar avatar--sm">{{ task.owner.username|first|upper }}</span>
+                    <span style="font-size:11px;color:var(--text-tertiary)">
+                        {{ task.created_at|timesince }} پیش
+                    </span>
+                    <div class="kanban-card__actions">
+                        <a href="{% url 'edit_task' task.id %}" class="action-btn" title="ویرایش">
+                            <i class="ti ti-edit"></i>
+                        </a>
+                        <a href="{% url 'delete_task' task.id %}" class="action-btn action-btn--danger" title="حذف">
+                            <i class="ti ti-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty">
+                <i class="ti ti-inbox"></i>
+                <p>وظیفه‌ای در این وضعیت نیست</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% if messages %}
+<div class="toast-container">
+    {% for message in messages %}
+        <div class="toast toast--{{ message.tags }}">
+            {% if message.tags == 'success' %}
+                <i class="ti ti-check"></i>
+            {% elif message.tags == 'danger' or message.tags == 'error' %}
+                <i class="ti ti-alert-circle"></i>
+            {% elif message.tags == 'warning' %}
+                <i class="ti ti-alert-triangle"></i>
+            {% else %}
+                <i class="ti ti-info-circle"></i>
+            {% endif %}
+            <span>{{ message }}</span>
+            <button class="toast__close action-btn" style="margin-right:auto;" type="button">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}

@@ -1,0 +1,63 @@
+{% load static %}
+<aside class="sidebar">
+    <div class="sidebar__brand">
+        <div class="sidebar__logo">
+            <i class="ti ti-briefcase"></i>
+        </div>
+        <div>
+            <div class="sidebar__title">اتوماسیون اداری</div>
+            <div class="sidebar__subtitle">نسخه ۲.۰</div>
+        </div>
+    </div>
+
+    <nav class="sidebar__nav">
+        <div class="sidebar__section">فضای کاری</div>
+
+        <a href="{% url 'todos' %}"
+           class="sidebar__link {% if request.resolver_match.url_name == 'todos' %}is-active{% endif %}">
+            <i class="ti ti-layout-kanban"></i>
+            <span>داشبورد وظایف</span>
+        </a>
+
+        <a href="{% url 'create_task' %}"
+           class="sidebar__link {% if request.resolver_match.url_name == 'create_task' %}is-active{% endif %}">
+            <i class="ti ti-plus"></i>
+            <span>وظیفه جدید</span>
+        </a>
+
+        <a href="{% url 'users' %}"
+           class="sidebar__link {% if request.resolver_match.url_name == 'users' %}is-active{% endif %}">
+            <i class="ti ti-users"></i>
+            <span>کاربران سازمان</span>
+        </a>
+
+        <div class="sidebar__section" style="margin-top: var(--s-4);">حساب من</div>
+
+        <a href="{% url 'profile' %}"
+           class="sidebar__link {% if request.resolver_match.url_name == 'profile' %}is-active{% endif %}">
+            <i class="ti ti-user-circle"></i>
+            <span>پروفایل</span>
+        </a>
+
+        <a href="{% url 'logout' %}" class="sidebar__link">
+            <i class="ti ti-logout"></i>
+            <span>خروج</span>
+        </a>
+    </nav>
+
+    <div class="sidebar__footer">
+        <a href="{% url 'profile' %}" class="sidebar__user">
+            {% if user.userprofile.profile_image %}
+                <span class="avatar avatar--sm" style="background-image: url('{{ user.userprofile.profile_image.url }}')"></span>
+            {% else %}
+                <span class="avatar avatar--sm">{{ user.username|first|upper }}</span>
+            {% endif %}
+            <div class="sidebar__user-info">
+                <div class="sidebar__user-name">{{ user.get_full_name|default:user.username }}</div>
+                <div class="sidebar__user-role">
+                    {% if user.userprofile.internal_number %}داخلی {{ user.userprofile.internal_number }}{% else %}کاربر{% endif %}
+                </div>
+            </div>
+        </a>
+    </div>
+</aside>

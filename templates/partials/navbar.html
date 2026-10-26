@@ -1,0 +1,30 @@
+<header class="navbar navbar-expand-md d-print-none">
+    <div class="container-xl">
+        <div class="navbar-nav flex-row order-md-last">
+            <div class="nav-item dropdown">
+                <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown">
+                    <span class="avatar avatar-sm" style="background-image: url('{% if user.userprofile.profile_image %}{{ user.userprofile.profile_image.url }}{% else %}https://ui-avatars.com/api/?name={{ user.username }}&background=206bc4&color=fff{% endif %}')"></span>
+                    <div class="d-none d-xl-block ps-2">
+                        <div>{{ user.get_full_name|default:user.username }}</div>
+                        <div class="mt-1 small text-secondary">
+                            {% if user.userprofile.internal_number %}داخلی {{ user.userprofile.internal_number }}{% endif %}
+                        </div>
+                    </div>
+                </a>
+                <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                    <a href="{% url 'profile' %}" class="dropdown-item">
+                        <i class="ti ti-user me-2"></i> پروفایل
+                    </a>
+                    <a href="{% url 'edit_profile' user.pk %}" class="dropdown-item">
+                        <i class="ti ti-edit me-2"></i> ویرایش پروفایل
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="{% url 'logout' %}" class="dropdown-item text-danger">
+                        <i class="ti ti-logout me-2"></i> خروج
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="collapse navbar-collapse" id="navbar-menu"></div>
+    </div>
+</header>

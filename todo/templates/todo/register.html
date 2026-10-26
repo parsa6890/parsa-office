@@ -1,43 +1,80 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>ثبت نام</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ثبت‌نام — اتوماسیون اداری</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
 
-    <h2>ثبت نام</h2>
-
-    {% if error %}
-        <div style="color:red;">
-            {{ error }}
+<div class="auth">
+    <div class="auth__hero">
+        <div class="auth__hero-content">
+            <div class="auth__hero-logo"><i class="ti ti-user-plus"></i></div>
+            <h1>به سازمان ما بپیوندید</h1>
+            <p>در کمتر از یک دقیقه حساب کاربری خود را بسازید و به تیم ما ملحق شوید. مدیریت هوشمند وظایف، همکاری تیمی و بهره‌وری سازمانی.</p>
         </div>
-    {% endif %}
+    </div>
 
-    <form method="POST">
-        {% csrf_token %}
+    <div class="auth__form-wrap">
+        <div class="auth__form">
+            <div class="auth__form-header">
+                <h2>ایجاد حساب کاربری</h2>
+                <p>اطلاعات زیر را برای ساخت حساب تکمیل کنید</p>
+            </div>
 
-        <label>نام کاربری:</label><br>
-        <input type="text" name="username" required>
-        <br><br>
+            {% if error %}
+                <div class="alert alert--danger">
+                    <i class="ti ti-alert-circle"></i>
+                    {{ error }}
+                </div>
+            {% endif %}
 
-        <label>رمز عبور:</label><br>
-        <input type="password" name="password" required>
-        <br><br>
+            <form method="POST">
+                {% csrf_token %}
 
-        <label>تکرار رمز عبور:</label><br>
-        <input type="password" name="confirm_password" required>
-        <br><br>
+                <div class="field">
+                    <label class="field__label">نام کاربری</label>
+                    <div class="auth__input-group">
+                        <i class="ti ti-user"></i>
+                        <input type="text" name="username" class="input" placeholder="نام کاربری خود را انتخاب کنید" required autofocus>
+                    </div>
+                </div>
 
-        <button type="submit">ثبت نام</button>
+                <div class="field">
+                    <label class="field__label">رمز عبور</label>
+                    <div class="auth__input-group">
+                        <i class="ti ti-lock"></i>
+                        <input type="password" name="password" class="input" placeholder="حداقل ۸ کاراکتر" required>
+                        <button type="button" class="toggle-pw"><i class="ti ti-eye"></i></button>
+                    </div>
+                </div>
 
-    </form>
+                <div class="field">
+                    <label class="field__label">تکرار رمز عبور</label>
+                    <div class="auth__input-group">
+                        <i class="ti ti-lock-check"></i>
+                        <input type="password" name="confirm_password" class="input" placeholder="رمز عبور را مجدداً وارد کنید" required>
+                        <button type="button" class="toggle-pw"><i class="ti ti-eye"></i></button>
+                    </div>
+                </div>
 
-    <br>
+                <button type="submit" class="btn btn--primary auth__submit">
+                    <i class="ti ti-user-plus"></i>
+                    ایجاد حساب کاربری
+                </button>
+            </form>
 
-    <a href="{% url 'login' %}">
-        قبلاً ثبت نام کرده‌اید؟ ورود
-    </a>
+            <div class="auth__footer">
+                قبلاً ثبت‌نام کرده‌اید؟ <a href="{% url 'login' %}">وارد شوید</a>
+            </div>
+        </div>
+    </div>
+</div>
 
+<script src="{% static 'js/app.js' %}"></script>
 </body>
 </html>

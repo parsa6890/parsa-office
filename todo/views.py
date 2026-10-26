@@ -1,3 +1,5 @@
+import json
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -35,14 +37,18 @@ class TodoListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        tasks = context["tasks"]
 
-        grouped_todos = {}
+        context["grouped_todos"] = {
+            status: tasks.filter(status=status) for status in STATUS_CHOICES
+        }
 
-        for status in STATUS_CHOICES:
-            grouped_todos[status] = context["tasks"].filter(status=status)
-
-        context["grouped_todos"] = grouped_todos
-
+        context["stats"] = {
+            "total":       tasks.count(),
+            "pending":     tasks.filter(status="pending").count(),
+            "in_progress": tasks.filter(status="in_progress").count(),
+            "done":        tasks.filter(status="done").count(),
+        }
         return context
 
 
@@ -187,7 +193,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        profile = UserProfile.objects.get(user=self.request.user)
+        profile,_ = UserProfile.objects.get_or_create(user=self.request.user)
         context["profile"]= profile
         return context
     
@@ -237,3 +243,25 @@ class UsersListView(LoginRequiredMixin, ListView):
 class UserDetailView(LoginRequiredMixin, DetailView):
     model = User
     template_name = "todo/user_detail.html"
+    
+    
+@login_required
+def update_task_status(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    task = get_object_or_404(TodoList, pk=pk, owner=request.user)
+
+    try:
+        data = json.loads(request.body)
+        new_status = data.get("status")
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    valid = [s[0] for s in STATUS_CHOICES]
+    if new_status not in valid:
+        return JsonResponse({"ok": False, "error": "Invalid status"}, status=400)
+
+    task.status = new_status
+    task.save(update_fields=["status"])
+    return JsonResponse({"ok": True, "status": new_status})

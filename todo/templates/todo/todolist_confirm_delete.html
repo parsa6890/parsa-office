@@ -1,8 +1,31 @@
-<h2>آیا مطمئن هستید که می‌خواهید این وظیفه را حذف کنید؟</h2>
+{% extends 'base.html' %}
+{% block title %}حذف وظیفه{% endblock %}
+{% block page_title %}حذف وظیفه{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
-    <button type="submit">بله، حذف کن</button>
-</form>
-
-<a href="{% url 'todos' %}">انصراف و بازگشت</a>
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-status-top bg-danger"></div>
+            <div class="card-body text-center py-5">
+                <i class="ti ti-alert-triangle text-danger" style="font-size:3rem"></i>
+                <h2 class="mt-3">حذف وظیفه</h2>
+                <p class="text-secondary">
+                    آیا مطمئن هستید که می‌خواهید وظیفه
+                    <strong>{{ object.title }}</strong>
+                    را حذف کنید؟ این عملیات قابل بازگشت نیست.
+                </p>
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="ti ti-trash me-1"></i> بله، حذف کن
+                        </button>
+                        <a href="{% url 'todos' %}" class="btn btn-link">انصراف و بازگشت</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

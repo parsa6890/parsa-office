@@ -1,0 +1,27 @@
+<header class="topbar">
+    <button class="topbar__menu-btn" data-menu-toggle type="button">
+        <i class="ti ti-menu-2"></i>
+    </button>
+
+    <div class="topbar__breadcrumb">
+        <span>داشبورد</span>
+        <i class="ti ti-chevron-left" style="font-size:14px"></i>
+        <strong>{% block breadcrumb %}وظایف{% endblock %}</strong>
+    </div>
+
+    <div class="topbar__search">
+        <i class="ti ti-search"></i>
+        <input type="text" placeholder="جستجو در وظایف..." id="global-search">
+    </div>
+
+    <div class="topbar__actions">
+        <button class="icon-btn" data-theme-toggle type="button" title="تغییر تم">
+            <i class="ti ti-moon"></i>
+        </button>
+
+        <button class="icon-btn" type="button" title="اعلان‌ها">
+            <i class="ti ti-bell"></i>
+            <span class="icon-btn__dot"></span>
+        </button>
+    </div>
+</header>

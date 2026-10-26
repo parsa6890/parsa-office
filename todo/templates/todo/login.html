@@ -1,13 +1,71 @@
-<h2>ورود</h2>
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود — اتوماسیون اداری</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
 
-{% if error %}
-<p style="color:red">{{ error }}</p>
-{% endif %}
+<div class="auth">
+    <div class="auth__hero">
+        <div class="auth__hero-content">
+            <div class="auth__hero-logo"><i class="ti ti-briefcase"></i></div>
+            <h1>به سامانه اتوماسیون اداری خوش آمدید</h1>
+            <p>مدیریت هوشمند وظایف، همکاری تیمی و بهره‌وری سازمانی در یک پلتفرم مدرن و یکپارچه.</p>
+        </div>
+    </div>
 
-<form method="POST">
-    {% csrf_token %}
-    <input type="text" name="username" placeholder="نام کاربری">
-    <input type="password" name="password" placeholder="رمز عبور">
-    <button type="submit">ورود</button>
-</form>
-<a href="{% url 'todos' %}">لیست وظایف</a>
+    <div class="auth__form-wrap">
+        <div class="auth__form">
+            <div class="auth__form-header">
+                <h2>ورود به حساب</h2>
+                <p>برای ادامه، اطلاعات حساب کاربری خود را وارد کنید</p>
+            </div>
+
+            {% if error %}
+                <div class="alert alert--danger">
+                    <i class="ti ti-alert-circle"></i>
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="field">
+                    <label class="field__label">نام کاربری</label>
+                    <div class="auth__input-group">
+                        <i class="ti ti-user"></i>
+                        <input type="text" name="username" class="input" placeholder="نام کاربری خود را وارد کنید" required autofocus>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="field__label">رمز عبور</label>
+                    <div class="auth__input-group">
+                        <i class="ti ti-lock"></i>
+                        <input type="password" name="password" class="input" placeholder="رمز عبور" required>
+                        <button type="button" class="toggle-pw"><i class="ti ti-eye"></i></button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn--primary auth__submit">
+                    <i class="ti ti-login"></i>
+                    ورود به حساب
+                </button>
+            </form>
+
+            <div class="auth__footer">
+                حساب کاربری ندارید؟ <a href="{% url 'register' %}">ثبت‌نام کنید</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

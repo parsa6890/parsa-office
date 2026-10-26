@@ -1,20 +1,138 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>وظیفه جدید</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% block title %}وظیفه جدید{% endblock %}
+{% block breadcrumb %}ایجاد وظیفه{% endblock %}
 
-    <h1>ایجاد وظیفه جدید</h1>
+{% block content %}
+<div class="page__header">
+    <div>
+        <h1 class="page__title">وظیفه جدید</h1>
+        <p class="page__subtitle">اطلاعات وظیفه را وارد کنید و آن را به تیم اختصاص دهید</p>
+    </div>
+    <div class="page__actions">
+        <a href="{% url 'todos' %}" class="btn btn--secondary">
+            <i class="ti ti-arrow-right"></i>
+            بازگشت به داشبورد
+        </a>
+    </div>
+</div>
 
-    <form method="POST">
-        {% csrf_token %}
+<form method="POST" class="form-grid">
+    {% csrf_token %}
 
-        {{ form.as_p }}
+    <!-- ستون اصلی -->
+    <div class="form-grid__main">
+        <div class="card">
+            <div class="card__body">
+                <div class="form-section">
+                    <h3 class="form-section__title">
+                        <i class="ti ti-file-text"></i>
+                        اطلاعات اصلی
+                    </h3>
 
-        <button type="submit">ذخیره</button>
-    <a href="{% url 'todos' %}">لیست وظایف</a>
-    </form>
-</body>
-</html>
+                    <div class="field">
+                        <label class="field__label" for="{{ form.title.id_for_label }}">
+                            عنوان وظیفه <span>*</span>
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="field__error">{{ form.title.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field">
+                        <label class="field__label" for="{{ form.description.id_for_label }}">
+                            توضیحات
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="field__error">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ستون کناری -->
+    <div class="form-grid__side">
+
+        <div class="card">
+            <div class="card__body">
+                <div class="form-section" style="margin-top:0;padding-top:0;border-top:none;">
+                    <h3 class="form-section__title">
+                        <i class="ti ti-settings"></i>
+                        تنظیمات
+                    </h3>
+
+                    <!-- اولویت — segmented -->
+                    <div class="field">
+                        <label class="field__label">اولویت</label>
+                        <div class="segmented segmented--priority">
+                            {% for value, label in form.fields.priority.choices %}
+                            <label class="segmented__item">
+                                <input type="radio" name="priority" value="{{ value }}"
+                                       {% if form.priority.value|stringformat:"s" == value|stringformat:"s" %}checked{% endif %}>
+                                <span class="segmented__label">
+                                    {% if value == 1 %}
+                                        <i class="ti ti-arrow-down"></i>
+                                    {% elif value == 2 %}
+                                        <i class="ti ti-minus"></i>
+                                    {% else %}
+                                        <i class="ti ti-arrow-up"></i>
+                                    {% endif %}
+                                    {{ label }}
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% if form.priority.errors %}
+                            <div class="field__error">{{ form.priority.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- وضعیت -->
+                    <div class="field">
+                        <label class="field__label" for="{{ form.status.id_for_label }}">وضعیت</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                            <div class="field__error">{{ form.status.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- تاریخ انجام -->
+                    <div class="field" style="margin-bottom:0;">
+                        <label class="field__label" for="{{ form.due_date.id_for_label }}">
+                            تاریخ انجام
+                            <span style="color:var(--text-tertiary);font-weight:400;font-size:11px;">(اختیاری)</span>
+                        </label>
+                        {{ form.due_date }}
+                        {% if form.due_date.errors %}
+                            <div class="field__error">{{ form.due_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- دکمه‌ها -->
+        <div class="card">
+            <div class="card__body">
+                <div class="form-actions">
+                    <button type="submit" class="btn btn--primary">
+                        <i class="ti ti-check"></i>
+                        ذخیره وظیفه
+                    </button>
+                    <a href="{% url 'todos' %}" class="btn btn--secondary">
+                        انصراف
+                    </a>
+                </div>
+                <p style="font-size:11px;color:var(--text-tertiary);text-align:center;margin-top:var(--s-3);line-height:1.6;">
+                    <i class="ti ti-info-circle" style="font-size:12px;"></i>
+                    بعد از ذخیره، می‌توانید وضعیت را از داشبورد کانبان تغییر دهید
+                </p>
+            </div>
+        </div>
+
+    </div>
+</form>
+{% endblock %}

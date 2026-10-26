@@ -1,24 +1,36 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>ویرایش وظیفه</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% block title %}ویرایش وظیفه{% endblock %}
+{% block page_title %}ویرایش وظیفه{% endblock %}
+{% block page_actions %}
+<a href="{% url 'todos' %}" class="btn btn-link">
+    <i class="ti ti-arrow-right me-1"></i> بازگشت به لیست
+</a>
+{% endblock %}
 
-    <h2>ویرایش وظیفه</h2>
-
-    <form method="POST">
-        {% csrf_token %}
-
-        {{ form.as_p }}
-
-        <button type="submit">به روز رسانی</button>
-    </form>
-
-    <br>
-
-    <a href="{% url 'todos' %}">لیست وظایف</a>
-
-</body>
-</html>     
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label">
+                        {{ field.label }}
+                        {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="text-danger small mt-1">{{ field.errors }}</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <div class="form-footer d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-check me-1"></i> به‌روزرسانی
+                </button>
+                <a href="{% url 'todos' %}" class="btn btn-link">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
