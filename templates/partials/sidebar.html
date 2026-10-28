@@ -25,6 +25,12 @@
             <span>وظیفه جدید</span>
         </a>
 
+        <a href="{% url 'conversation_list' %}"
+           class="sidebar__link {% if 'chat' in request.path or 'conversation' in request.resolver_match.url_name %}is-active{% endif %}">
+            <i class="ti ti-message-circle"></i>
+            <span>چت سازمانی</span>
+        </a>
+
         <a href="{% url 'users' %}"
            class="sidebar__link {% if request.resolver_match.url_name == 'users' %}is-active{% endif %}">
             <i class="ti ti-users"></i>

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}چت سازمانی{% endblock %}
+{% block breadcrumb %}چت{% endblock %}
+
+{% block content %}
+<div class="page__header">
+    <div>
+        <h1 class="page__title">چت سازمانی</h1>
+        <p class="page__subtitle">
+            {% if enriched %}
+                {{ enriched|length }} گفتگو
+            {% else %}
+                گفتگو با همکاران سازمان
+            {% endif %}
+        </p>
+    </div>
+    <div class="page__actions">
+        <a href="{% url 'users' %}" class="btn btn--primary">
+            <i class="ti ti-plus"></i>
+            گفتگوی جدید
+        </a>
+    </div>
+</div>
+
+<div class="chat-layout">
+    <div class="chat-sidebar chat-sidebar--full">
+        <div class="chat-sidebar__header">
+            <span class="chat-sidebar__title">همه گفتگوها</span>
+            {% if enriched %}
+                <span class="badge badge--neutral">{{ enriched|length }}</span>
+            {% endif %}
+        </div>
+
+        <div class="chat-sidebar__list">
+            {% for item in enriched %}
+                <a href="{% url 'conversation_detail' item.conv.pk %}" class="chat-item">
+                    <!-- آواتار -->
+                    <span class="avatar">
+                        {% if item.conv.is_group %}
+                            <i class="ti ti-users" style="font-size:16px;"></i>
+                        {% elif item.other and item.other.userprofile.profile_image %}
+                            <img src="{{ item.other.userprofile.profile_image.url }}"
+                                 style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+                                 alt="{{ item.display_name }}">
+                        {% else %}
+                            {{ item.display_name|first|upper }}
+                        {% endif %}
+                    </span>
+
+                    <!-- بدنه -->
+                    <div class="chat-item__body">
+                        <div class="chat-item__name">
+                            {{ item.display_name }}
+                            {% if item.conv.is_group %}
+                                <i class="ti ti-users" style="font-size:11px;opacity:0.5;"></i>
+                            {% endif %}
+                        </div>
+                        {% if item.last_message %}
+                            <div class="chat-item__last">
+                                {% if item.last_message.sender == user %}
+                                    <span style="color:var(--brand-500);font-weight:600;">شما:</span>
+                                {% endif %}
+                                {{ item.last_message.text|truncatechars:40 }}
+                            </div>
+                        {% else %}
+                            <div class="chat-item__last" style="font-style:italic;">بدون پیام</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- متادیتا -->
+                    <div class="chat-item__right">
+                        {% if item.last_message %}
+                            <div class="chat-item__meta">
+                                {{ item.last_message.created_at|date:"H:i" }}
+                            </div>
+                        {% endif %}
+                        {% if item.unread %}
+                            <span class="chat-item__unread">{{ item.unread }}</span>
+                        {% endif %}
+                    </div>
+                </a>
+            {% empty %}
+                <div class="empty" style="padding: 60px 20px;">
+                    <i class="ti ti-message-circle"></i>
+                    <p style="margin-bottom:16px;">هنوز گفتگویی ندارید</p>
+                    <a href="{% url 'users' %}" class="btn btn--primary btn--sm">
+                        <i class="ti ti-users"></i>
+                        شروع گفتگو با همکاران
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

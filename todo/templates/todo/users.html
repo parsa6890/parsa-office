@@ -1,29 +1,164 @@
 {% extends 'base.html' %}
 {% block title %}کاربران سازمان{% endblock %}
-{% block page_title %}کاربران سازمان{% endblock %}
+{% block breadcrumb %}کاربران{% endblock %}
 
 {% block content %}
-<div class="row row-cards">
+<div class="page__header">
+    <div>
+        <h1 class="page__title">کاربران سازمان</h1>
+        <p class="page__subtitle">
+            {{ object_list|length }} همکار در سازمان
+        </p>
+    </div>
+    <div class="page__actions">
+        <button class="btn btn--secondary" onclick="document.getElementById('user-search').focus()">
+            <i class="ti ti-search"></i>
+            جستجو
+        </button>
+    </div>
+</div>
+
+<!-- نوار جستجو -->
+<div class="users-search">
+    <i class="ti ti-search"></i>
+    <input
+        type="text"
+        id="user-search"
+        class="users-search__input"
+        placeholder="جستجو بر اساس نام، نام کاربری یا شماره داخلی..."
+        autocomplete="off"
+    >
+    <button class="users-search__clear" id="search-clear" type="button" style="display:none;" title="پاک کردن">
+        <i class="ti ti-x"></i>
+    </button>
+</div>
+
+<!-- گرید کاربران -->
+<div class="users-grid" id="users-grid">
     {% for u in object_list %}
-    <div class="col-md-4">
-        <div class="card card-link">
-            <div class="card-body text-center">
+    <div class="user-card"
+         data-search="{{ u.username|lower }} {{ u.first_name|lower }} {{ u.last_name|lower }} {{ u.userprofile.internal_number|default:'' }}">
+
+        <!-- کاور -->
+        <div class="user-card__cover"></div>
+
+        <!-- آواتار -->
+        <div class="user-card__avatar-wrap">
+            <div class="user-card__avatar">
                 {% if u.userprofile.profile_image %}
-                    <img src="{{ u.userprofile.profile_image.url }}" class="rounded-circle mb-2" width="80" height="80" style="object-fit:cover">
+                    <img src="{{ u.userprofile.profile_image.url }}" alt="{{ u.username }}">
                 {% else %}
-                    <span class="avatar avatar-lg mb-2" style="background-image: url('https://ui-avatars.com/api/?name={{ u.username }}&background=206bc4&color=fff&size=80')"></span>
+                    {{ u.username|first|upper }}
                 {% endif %}
-                <h3 class="mb-1">{{ u.get_full_name|default:u.username }}</h3>
-                <div class="text-secondary">@{{ u.username }}</div>
-                {% if u.userprofile.internal_number %}<div class="text-muted small mt-1">داخلی {{ u.userprofile.internal_number }}</div>{% endif %}
-                <div class="mt-3">
-                    <a href="{% url 'user_detail' u.pk %}" class="btn btn-sm btn-outline-primary">مشاهده پروفایل</a>
-                </div>
+            </div>
+        </div>
+
+        <!-- بدنه -->
+        <div class="user-card__body">
+            <h3 class="user-card__name">
+                {{ u.get_full_name|default:u.username }}
+            </h3>
+            <div class="user-card__username">@{{ u.username }}</div>
+
+            <!-- اطلاعات سریع -->
+            <div class="user-card__meta">
+                {% if u.userprofile.internal_number %}
+                    <span class="user-card__chip">
+                        <i class="ti ti-phone"></i>
+                        {{ u.userprofile.internal_number }}
+                    </span>
+                {% endif %}
+                {% if u.userprofile.organizational_email %}
+                    <span class="user-card__chip user-card__chip--success">
+                        <i class="ti ti-mail"></i>
+                        سازمانی
+                    </span>
+                {% endif %}
+            </div>
+
+            <!-- دکمه‌ها -->
+            <div class="user-card__actions">
+                <a href="{% url 'user_detail' u.pk %}" class="btn btn--secondary btn--sm">
+                    <i class="ti ti-user"></i>
+                    پروفایل
+                </a>
+                <a href="{% url 'start_conversation' u.pk %}" class="btn btn--primary btn--sm">
+                    <i class="ti ti-message-circle"></i>
+                    پیام
+                </a>
             </div>
         </div>
     </div>
     {% empty %}
-    <div class="col-12"><div class="card"><div class="card-body text-center text-muted">کاربری برای نمایش وجود ندارد.</div></div></div>
+    <div class="users-empty">
+        <i class="ti ti-users-off"></i>
+        <h3>کاربری یافت نشد</h3>
+        <p>در حال حاضر کاربر دیگری در سازمان ثبت‌نام نکرده است.</p>
+    </div>
     {% endfor %}
 </div>
+
+<!-- حالت خالی جستجو -->
+<div class="users-empty" id="search-empty" style="display:none;">
+    <i class="ti ti-search-off"></i>
+    <h3>نتیجه‌ای پیدا نشد</h3>
+    <p>هیچ کاربری با این عبارت مطابقت نداشت.</p>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const searchInput = document.getElementById('user-search');
+    const clearBtn = document.getElementById('search-clear');
+    const cards = document.querySelectorAll('.user-card');
+    const grid = document.getElementById('users-grid');
+    const empty = document.getElementById('search-empty');
+
+    function filterUsers() {
+        const q = searchInput.value.trim().toLowerCase();
+        clearBtn.style.display = q ? 'grid' : 'none';
+
+        if (!q) {
+            cards.forEach(c => c.style.display = '');
+            grid.style.display = '';
+            empty.style.display = 'none';
+            return;
+        }
+
+        let visible = 0;
+        cards.forEach(card => {
+            const haystack = card.dataset.search || '';
+            const match = haystack.includes(q);
+            card.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+
+        if (visible === 0) {
+            grid.style.display = 'none';
+            empty.style.display = '';
+        } else {
+            grid.style.display = '';
+            empty.style.display = 'none';
+        }
+    }
+
+    searchInput.addEventListener('input', filterUsers);
+
+    clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        filterUsers();
+        searchInput.focus();
+    });
+
+    // Ctrl+K برای فوکوس روی جستجو
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            searchInput.focus();
+        }
+    });
+})();
+</script>
 {% endblock %}

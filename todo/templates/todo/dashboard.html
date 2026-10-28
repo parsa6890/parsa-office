@@ -1,42 +1,248 @@
 {% extends 'base.html' %}
 {% block title %}پروفایل من{% endblock %}
-{% block page_title %}پروفایل من{% endblock %}
-{% block page_actions %}
-<a href="{% url 'edit_profile' profile.pk %}" class="btn btn-primary">
-    <i class="ti ti-edit me-1"></i> ویرایش
-</a>
-{% endblock %}
+{% block breadcrumb %}پروفایل{% endblock %}
 
 {% block content %}
-<div class="row row-cards">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
-                {% if profile.profile_image %}
-                    <img src="{{ profile.profile_image.url }}" class="rounded-circle mb-3" width="120" height="120" style="object-fit:cover">
-                {% else %}
-                    <span class="avatar avatar-xl mb-3" style="background-image: url('https://ui-avatars.com/api/?name={{ profile.user.username }}&background=206bc4&color=fff&size=120')"></span>
-                {% endif %}
-                <h3 class="mb-1">{{ profile.user.get_full_name|default:profile.user.username }}</h3>
-                <div class="text-secondary">@{{ profile.user.username }}</div>
-                {% if profile.bio %}
-                    <p class="text-secondary mt-3">{{ profile.bio }}</p>
-                {% endif %}
-            </div>
-        </div>
+<div class="page__header">
+    <div>
+        <h1 class="page__title">پروفایل من</h1>
+        <p class="page__subtitle">مدیریت اطلاعات حساب کاربری</p>
     </div>
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header"><h3 class="card-title">اطلاعات تماس</h3></div>
-            <div class="card-body">
-                <div class="datagrid">
-                    {% if profile.mobile %}<div class="datagrid-item"><div class="datagrid-title">موبایل</div><div class="datagrid-content">{{ profile.mobile }}</div></div>{% endif %}
-                    {% if profile.internal_number %}<div class="datagrid-item"><div class="datagrid-title">داخلی</div><div class="datagrid-content">{{ profile.internal_number }}</div></div>{% endif %}
-                    {% if profile.email %}<div class="datagrid-item"><div class="datagrid-title">ایمیل</div><div class="datagrid-content">{{ profile.email }}</div></div>{% endif %}
-                    {% if profile.organizational_email %}<div class="datagrid-item"><div class="datagrid-title">ایمیل سازمانی</div><div class="datagrid-content">{{ profile.organizational_email }}</div></div>{% endif %}
+    <div class="page__actions">
+        <a href="{% url 'edit_profile' profile.pk %}" class="btn btn--primary">
+            <i class="ti ti-edit"></i>
+            ویرایش پروفایل
+        </a>
+    </div>
+</div>
+
+<div class="profile-layout">
+
+    <!-- ستون چپ: کارت هویت -->
+    <div>
+        <div class="profile-hero">
+            <div class="profile-hero__cover"></div>
+
+            <div class="profile-hero__avatar-wrap">
+                <div class="profile-hero__avatar">
+                    {% if profile.profile_image %}
+                        <img src="{{ profile.profile_image.url }}" alt="{{ profile.user.username }}">
+                    {% else %}
+                        {{ profile.user.username|first|upper }}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="profile-hero__body">
+                <h2 class="profile-hero__name">
+                    {{ profile.user.get_full_name|default:profile.user.username }}
+                </h2>
+                <div class="profile-hero__username">{{ profile.user.username }}</div>
+
+                <div class="profile-hero__badges">
+                    {% if profile.internal_number %}
+                        <span class="badge badge--info">
+                            <i class="ti ti-phone" style="font-size:11px"></i>
+                            داخلی {{ profile.internal_number }}
+                        </span>
+                    {% endif %}
+                    {% if profile.organizational_email %}
+                        <span class="badge badge--success">
+                            <i class="ti ti-mail" style="font-size:11px"></i>
+                            سازمانی
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="profile-hero__actions">
+                    <a href="{% url 'edit_profile' profile.pk %}" class="btn btn--secondary">
+                        <i class="ti ti-edit"></i>
+                        ویرایش پروفایل
+                    </a>
+                    <a href="{% url 'users' %}" class="btn btn--ghost">
+                        <i class="ti ti-users"></i>
+                        مشاهده کاربران سازمان
+                    </a>
                 </div>
             </div>
         </div>
+
+        <!-- آمار سریع -->
+        <div class="profile-stats" style="margin-top: var(--s-4);">
+            <div class="profile-stat">
+                <div class="profile-stat__value profile-stat__value--brand">{{ user_stats.total|default:0 }}</div>
+                <div class="profile-stat__label">کل وظایف</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat__value profile-stat__value--success">{{ user_stats.done|default:0 }}</div>
+                <div class="profile-stat__label">انجام شده</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat__value profile-stat__value--warning">{{ user_stats.pending|default:0 }}</div>
+                <div class="profile-stat__label">در انتظار</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ستون راست: اطلاعات -->
+    <div style="display: flex; flex-direction: column; gap: var(--s-4);">
+
+        <!-- درباره من -->
+        {% if profile.bio %}
+        <div class="bio-card">
+            <div class="bio-card__title">
+                <i class="ti ti-quote"></i>
+                درباره من
+            </div>
+            <p class="bio-card__text">{{ profile.bio }}</p>
+        </div>
+        {% endif %}
+
+        <!-- اطلاعات کاربری -->
+        <div class="info-card">
+            <div class="info-card__header">
+                <i class="ti ti-user"></i>
+                <h3 class="info-card__title">اطلاعات کاربری</h3>
+            </div>
+            <div class="info-card__body">
+
+                <div class="info-row">
+                    <div class="info-row__icon"><i class="ti ti-user"></i></div>
+                    <div class="info-row__body">
+                        <div class="info-row__label">نام کاربری</div>
+                        <div class="info-row__value">{{ profile.user.username }}</div>
+                    </div>
+                    <button class="info-row__copy" data-copy="{{ profile.user.username }}" title="کپی">
+                        <i class="ti ti-copy"></i>
+                    </button>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-row__icon"><i class="ti ti-id-badge"></i></div>
+                    <div class="info-row__body">
+                        <div class="info-row__label">نام</div>
+                        <div class="info-row__value {% if not profile.user.first_name %}info-row__value--empty{% endif %}">
+                            {{ profile.user.first_name|default:"وارد نشده" }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-row__icon"><i class="ti ti-id-badge-2"></i></div>
+                    <div class="info-row__body">
+                        <div class="info-row__label">نام خانوادگی</div>
+                        <div class="info-row__value {% if not profile.user.last_name %}info-row__value--empty{% endif %}">
+                            {{ profile.user.last_name|default:"وارد نشده" }}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- اطلاعات تماس -->
+        <div class="info-card">
+            <div class="info-card__header">
+                <i class="ti ti-address-book"></i>
+                <h3 class="info-card__title">اطلاعات تماس</h3>
+            </div>
+            <div class="info-card__body">
+
+                <div class="info-row">
+                    <div class="info-row__icon"><i class="ti ti-phone"></i></div>
+                    <div class="info-row__body">
+                        <div class="info-row__label">شماره موبایل</div>
+                        <div class="info-row__value {% if not profile.mobile %}info-row__value--empty{% endif %}">
+                            {% if profile.mobile %}
+                                <a href="tel:{{ profile.mobile }}" dir="ltr">{{ profile.mobile }}</a>
+                            {% else %}
+                                وارد نشده
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if profile.mobile %}
+                    <button class="info-row__copy" data-copy="{{ profile.mobile }}" title="کپی">
+                        <i class="ti ti-copy"></i>
+                    </button>
+                    {% endif %}
+                </div>
+
+                <div class="info-row">
+                    <div class="info-row__icon"><i class="ti ti-phone-call"></i></div>
+                    <div class="info-row__body">
+                        <div class="info-row__label">شماره داخلی</div>
+                        <div class="info-row__value {% if not profile.internal_number %}info-row__value--empty{% endif %}">
+                            {{ profile.internal_number|default:"وارد نشده" }}
+                        </div>
+                    </div>
+                    {% if profile.internal_number %}
+                    <button class="info-row__copy" data-copy="{{ profile.internal_number }}" title="کپی">
+                        <i class="ti ti-copy"></i>
+                    </button>
+                    {% endif %}
+                </div>
+
+                <div class="info-row">
+                    <div class="info-row__icon"><i class="ti ti-mail"></i></div>
+                    <div class="info-row__body">
+                        <div class="info-row__label">ایمیل شخصی</div>
+                        <div class="info-row__value {% if not profile.email %}info-row__value--empty{% endif %}">
+                            {% if profile.email %}
+                                <a href="mailto:{{ profile.email }}">{{ profile.email }}</a>
+                            {% else %}
+                                وارد نشده
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if profile.email %}
+                    <button class="info-row__copy" data-copy="{{ profile.email }}" title="کپی">
+                        <i class="ti ti-copy"></i>
+                    </button>
+                    {% endif %}
+                </div>
+
+                <div class="info-row">
+                    <div class="info-row__icon"><i class="ti ti-mailbox"></i></div>
+                    <div class="info-row__body">
+                        <div class="info-row__label">ایمیل سازمانی</div>
+                        <div class="info-row__value {% if not profile.organizational_email %}info-row__value--empty{% endif %}">
+                            {% if profile.organizational_email %}
+                                <a href="mailto:{{ profile.organizational_email }}">{{ profile.organizational_email }}</a>
+                            {% else %}
+                                وارد نشده
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if profile.organizational_email %}
+                    <button class="info-row__copy" data-copy="{{ profile.organizational_email }}" title="کپی">
+                        <i class="ti ti-copy"></i>
+                    </button>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const text = btn.dataset.copy;
+        try {
+            await navigator.clipboard.writeText(text);
+            window.showToast?.('کپی شد', 'success');
+            const icon = btn.querySelector('i');
+            const old = icon.className;
+            icon.className = 'ti ti-check';
+            setTimeout(() => icon.className = old, 1200);
+        } catch {
+            window.showToast?.('خطا در کپی', 'danger');
+        }
+    });
+});
+</script>
 {% endblock %}

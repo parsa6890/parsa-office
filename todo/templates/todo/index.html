@@ -42,7 +42,6 @@
 
 <!-- کانبان -->
 <div class="kanban">
-
     {% for status, tasks in grouped_todos.items %}
     <div class="kanban-column" data-status="{{ status }}">
         <div class="kanban-column__header">
@@ -61,7 +60,17 @@
                  draggable="true"
                  data-id="{{ task.id }}"
                  data-status="{{ status }}"
-                 data-priority="{{ task.priority }}">
+                 data-priority="{{ task.priority }}"
+                 data-title="{{ task.title }}"
+                 data-desc="{{ task.description }}"
+                 data-priority-label="{% if task.priority == 3 %}بالا{% elif task.priority == 2 %}متوسط{% else %}پایین{% endif %}"
+                 data-status-label="{{ task.get_status_display }}"
+                 {% if task.due_date %}data-due="{{ task.due_date|date:'Y/m/d H:i' }}"{% endif %}
+                 data-owner="{{ task.owner.get_full_name|default:task.owner.username }}"
+                 data-created="{{ task.created_at|date:'Y/m/d' }}"
+                 data-edit-url="{% url 'edit_task' task.id %}"
+                 data-delete-url="{% url 'delete_task' task.id %}"
+                 onclick="openTaskModal(this)">
 
                 <div class="kanban-card__header">
                     {% if task.priority == 3 %}
@@ -91,7 +100,7 @@
                     <span style="font-size:11px;color:var(--text-tertiary)">
                         {{ task.created_at|timesince }} پیش
                     </span>
-                    <div class="kanban-card__actions">
+                    <div class="kanban-card__actions" onclick="event.stopPropagation()">
                         <a href="{% url 'edit_task' task.id %}" class="action-btn" title="ویرایش">
                             <i class="ti ti-edit"></i>
                         </a>
@@ -110,6 +119,79 @@
         </div>
     </div>
     {% endfor %}
-
 </div>
+
+<!-- Task Detail Modal -->
+<div class="task-modal" id="task-modal">
+    <div class="task-modal__backdrop" onclick="closeTaskModal()"></div>
+    <div class="task-modal__panel">
+        <div class="task-modal__header">
+            <h2 class="task-modal__title" id="task-modal-title"></h2>
+            <button class="task-modal__close" type="button" onclick="closeTaskModal()">
+                <i class="ti ti-x"></i>
+            </button>
+        </div>
+        <div class="task-modal__body">
+            <div class="task-modal__meta" id="task-modal-meta"></div>
+            <div class="task-modal__section">
+                <div class="task-modal__label">توضیحات کامل</div>
+                <div class="task-modal__desc" id="task-modal-desc"></div>
+            </div>
+        </div>
+        <div class="task-modal__footer" id="task-modal-footer"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openTaskModal(card) {
+    const modal = document.getElementById('task-modal');
+    document.getElementById('task-modal-title').textContent = card.dataset.title;
+    document.getElementById('task-modal-desc').textContent =
+        card.dataset.desc || 'توضیحاتی ثبت نشده است.';
+
+    const prMap = { '1': 'success', '2': 'warning', '3': 'danger' };
+    const color = prMap[card.dataset.priority] || 'neutral';
+
+    let metaHtml = `<span class="badge badge--${color}">اولویت ${card.dataset.priorityLabel}</span>`;
+    if (card.dataset.statusLabel) {
+        metaHtml += `<span class="badge badge--info">${card.dataset.statusLabel}</span>`;
+    }
+    if (card.dataset.due) {
+        metaHtml += `<span class="badge badge--neutral"><i class="ti ti-calendar"></i> ${card.dataset.due}</span>`;
+    }
+    if (card.dataset.owner) {
+        metaHtml += `<span class="badge badge--neutral"><i class="ti ti-user"></i> ${card.dataset.owner}</span>`;
+    }
+    if (card.dataset.created) {
+        metaHtml += `<span class="badge badge--neutral"><i class="ti ti-clock"></i> ${card.dataset.created}</span>`;
+    }
+    document.getElementById('task-modal-meta').innerHTML = metaHtml;
+
+    document.getElementById('task-modal-footer').innerHTML = `
+        <a href="${card.dataset.editUrl}" class="btn btn--primary">
+            <i class="ti ti-edit"></i> ویرایش
+        </a>
+        <a href="${card.dataset.deleteUrl}" class="btn btn--danger">
+            <i class="ti ti-trash"></i> حذف
+        </a>
+        <button type="button" class="btn btn--secondary" onclick="closeTaskModal()">
+            بستن
+        </button>
+    `;
+
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeTaskModal() {
+    document.getElementById('task-modal').classList.remove('is-open');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeTaskModal();
+});
+</script>
 {% endblock %}

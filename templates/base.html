@@ -25,5 +25,57 @@
 
     <script src="{% static 'js/app.js' %}"></script>
     {% block extra_js %}{% endblock %}
+
+    <script>
+        (function() {
+            const chatLink = document.querySelector('.sidebar__link[href*="/chat/"]');
+            if (!chatLink) return;
+
+            let lastTotal = 0;
+            let currentBadge = chatLink.querySelector('.sidebar__badge');
+            const onChatPage = window.location.pathname.startsWith('/chat/');
+
+            function updateBadge(total) {
+                if (total > 0) {
+                    if (!currentBadge) {
+                        currentBadge = document.createElement('span');
+                        currentBadge.className = 'sidebar__badge';
+                        chatLink.appendChild(currentBadge);
+                    }
+                    currentBadge.textContent = total;
+                    currentBadge.style.display = '';
+                } else if (currentBadge) {
+                    currentBadge.style.display = 'none';
+                }
+            }
+
+            async function pollUnread() {
+                try {
+                    const res = await fetch('/chat/unread/');
+                    const data = await res.json();
+                    if (!data.ok) return;
+
+                    updateBadge(data.total);
+
+                    // Toast فقط اگه پیام جدید اومده و کاربر توی صفحه چت نیست
+                    if (data.total > lastTotal && !onChatPage && data.details.length) {
+                        const first = data.details[0];
+                        const msg = first.count === 1
+                            ? `پیام جدید از ${first.last_sender}`
+                            : `${data.total} پیام خوانده‌نشده جدید`;
+                        window.showToast?.(msg, 'info');
+                    }
+                    lastTotal = data.total;
+                } catch (e) {
+                    // silent fail
+                }
+            }
+
+            // اولین بار بلافاصله
+            pollUnread();
+            // هر ۱۵ ثانیه
+            setInterval(pollUnread, 15000);
+        })();
+    </script>
 </body>
 </html>

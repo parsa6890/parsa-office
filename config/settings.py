@@ -122,6 +122,11 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# ============ UPLOAD LIMITS ============
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024      # 50MB کل فرم
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024      # 10MB در RAM (بیشتر → دیسک)
+DATA_UPLOAD_MAX_NUMBER_FILES = 10
+
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 

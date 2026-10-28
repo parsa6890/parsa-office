@@ -1,15 +1,16 @@
-import json
+import json, os
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
-from .models import TodoList, UserProfile
+from .models import TodoList, UserProfile, Conversation, Message, ConversationRead
 from .forms import TodoForm, UserForm, UserProfileForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, TemplateView, DetailView
 from django.urls import reverse_lazy
+from django.db.models import Max, Count
 
 
 # STATUS_CHOICES=['pending', 'in_progress', 'done']
@@ -193,8 +194,15 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        profile,_ = UserProfile.objects.get_or_create(user=self.request.user)
-        context["profile"]= profile
+        profile, _ = UserProfile.objects.get_or_create(user=self.request.user)
+        context["profile"] = profile
+
+        tasks = TodoList.objects.filter(owner=self.request.user)
+        context["user_stats"] = {
+            "total":   tasks.count(),
+            "done":    tasks.filter(status="done").count(),
+            "pending": tasks.filter(status="pending").count(),
+        }
         return context
     
 
@@ -243,6 +251,12 @@ class UsersListView(LoginRequiredMixin, ListView):
 class UserDetailView(LoginRequiredMixin, DetailView):
     model = User
     template_name = "todo/user_detail.html"
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        # ✅ پروفایل رو خودکار بساز اگه نیست
+        UserProfile.objects.get_or_create(user=obj)
+        return obj
     
     
 @login_required
@@ -265,3 +279,345 @@ def update_task_status(request, pk):
     task.status = new_status
     task.save(update_fields=["status"])
     return JsonResponse({"ok": True, "status": new_status})
+
+# ==========================================================
+# CHAT
+# ==========================================================
+
+class ConversationListView(LoginRequiredMixin, ListView):
+    model = Conversation
+    template_name = "todo/chat/conversation_list.html"
+    context_object_name = "conversations"
+
+    def get_queryset(self):
+        return (
+            Conversation.objects
+            .filter(participants=self.request.user)
+            .annotate(last_message_at=Max("messages__created_at"))
+            .order_by("-last_message_at", "-updated_at")
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        enriched = []
+        for conv in context["conversations"]:
+            # نام نمایشی
+            if conv.is_group and conv.name:
+                display_name = conv.name
+            else:
+                others = conv.participants.exclude(pk=self.request.user.pk)
+                if others.exists():
+                    o = others.first()
+                    display_name = o.get_full_name() or o.username
+                else:
+                    display_name = "گفتگوی شخصی"
+
+            # آخرین پیام
+            last_msg = conv.messages.order_by("-created_at").first()
+
+            # تعداد خوانده‌نشده
+            read = ConversationRead.objects.filter(
+                conversation=conv, user=self.request.user
+            ).first()
+            last_id = read.last_read_message_id if read else 0
+            unread = conv.messages.filter(id__gt=last_id).exclude(
+                sender=self.request.user
+            ).count()
+
+            enriched.append({
+                "conv": conv,
+                "display_name": display_name,
+                "other": conv.participants.exclude(pk=self.request.user.pk).first(),
+                "last_message": last_msg,
+                "unread": unread,
+            })
+
+        context["enriched"] = enriched
+        return context
+
+class ConversationDetailView(LoginRequiredMixin, DetailView):
+    model = Conversation
+    template_name = "todo/chat/conversation_detail.html"
+    context_object_name = "conversation"
+
+    def get_queryset(self):
+        return Conversation.objects.filter(participants=self.request.user)
+
+    def get_object(self, queryset=None):
+        obj = super().get_object(queryset)
+        # علامت‌گذاری پیام‌ها به عنوان خوانده‌شده
+        self._mark_as_read(obj)
+        return obj
+
+    def _mark_as_read(self, conv):
+        last_msg = conv.messages.order_by("-id").first()
+        if not last_msg:
+            return
+        read, _ = ConversationRead.objects.get_or_create(
+            conversation=conv, user=self.request.user
+        )
+        if last_msg.id > read.last_read_message_id:
+            read.last_read_message_id = last_msg.id
+            read.save(update_fields=["last_read_message_id", "updated_at"])
+
+    def _get_display_name(self, conv):
+        """محاسبه نام نمایشی گفتگو برای کاربر فعلی"""
+        if conv.is_group and conv.name:
+            return conv.name
+        others = conv.participants.exclude(pk=self.request.user.pk)
+        if others.exists():
+            other = others.first()
+            return other.get_full_name() or other.username
+        return "گفتگوی شخصی"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        conv = self.object
+
+        # نمایش نام و طرف مقابل
+        others = conv.participants.exclude(pk=self.request.user.pk)
+        context["display_name"] = self._get_display_name(conv)
+        context["other_user"] = others.first() if others.exists() else None
+
+        # لیست پیام‌ها
+        context["messages_list"] = (
+            conv.messages
+            .select_related("sender")
+            .order_by("created_at")
+        )
+
+        # لیست همه گفتگوها برای سایدبار
+        convs = (
+            Conversation.objects
+            .filter(participants=self.request.user)
+            .annotate(last_message_at=Max("messages__created_at"))
+            .order_by("-last_message_at", "-updated_at")
+        )
+
+        enriched = []
+        for c in convs:
+            # نام نمایشی
+            if c.is_group and c.name:
+                name = c.name
+            else:
+                o = c.participants.exclude(pk=self.request.user.pk).first()
+                name = (o.get_full_name() or o.username) if o else "گفتگو"
+
+            # آخرین پیام
+            last = c.messages.order_by("-created_at").first()
+
+            # تعداد خوانده‌نشده
+            read = ConversationRead.objects.filter(
+                conversation=c, user=self.request.user
+            ).first()
+            last_id = read.last_read_message_id if read else 0
+            unread = c.messages.filter(id__gt=last_id).exclude(
+                sender=self.request.user
+            ).count()
+
+            enriched.append({
+                "conv": c,
+                "display_name": name,
+                "last_message": last,
+                "unread": unread,
+            })
+
+        context["all_conversations"] = enriched
+        return context
+
+@login_required
+def start_conversation_view(request, user_id):
+    other_user = get_object_or_404(User, pk=user_id)
+
+    if other_user == request.user:
+        messages.error(request, "نمی‌توانید با خودتان گفتگو کنید.")
+        return redirect("users")
+
+    existing = (
+        Conversation.objects
+        .filter(is_group=False, participants=request.user)
+        .filter(participants=other_user)
+        .first()
+    )
+    if existing:
+        return redirect("conversation_detail", pk=existing.pk)
+
+    conv = Conversation.objects.create(is_group=False, created_by=request.user)
+    conv.participants.add(request.user, other_user)
+    return redirect("conversation_detail", pk=conv.pk)
+
+
+@login_required
+def send_message_view(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Method not allowed"}, status=405)
+
+    conv = get_object_or_404(Conversation, pk=pk, participants=request.user)
+
+    # ─── تشخیص نوع درخواست (JSON یا multipart) ───
+    is_multipart = request.content_type and request.content_type.startswith("multipart/")
+
+    if is_multipart:
+        text = (request.POST.get("text") or "").strip()
+        attachment = request.FILES.get("attachment")
+    else:
+        try:
+            data = json.loads(request.body)
+            text = (data.get("text") or "").strip()
+            attachment = None
+        except (json.JSONDecodeError, AttributeError):
+            return JsonResponse({"ok": False, "error": "داده نامعتبر"}, status=400)
+
+    if not text and not attachment:
+        return JsonResponse({"ok": False, "error": "پیام خالی است"}, status=400)
+
+    # ─── اعتبارسنجی فایل ───
+    atype = ""
+    if attachment:
+        MAX_SIZE = 50 * 1024 * 1024  # 50MB
+        if attachment.size > MAX_SIZE:
+            return JsonResponse(
+                {"ok": False, "error": "حجم فایل بیش از ۵۰ مگابایت است"}, status=400
+            )
+
+        FORBIDDEN = {".exe", ".bat", ".cmd", ".sh", ".php", ".js", ".jsp", ".asp", ".aspx"}
+        ext = os.path.splitext(attachment.name)[1].lower()
+        if ext in FORBIDDEN:
+            return JsonResponse({"ok": False, "error": "این نوع فایل مجاز نیست"}, status=400)
+
+        mime = attachment.content_type or ""
+        if mime.startswith("image/"):
+            atype = "image"
+        elif mime.startswith("video/"):
+            atype = "video"
+        elif mime.startswith("audio/"):
+            atype = "audio"
+        else:
+            atype = "file"
+
+    # ─── ساخت پیام ───
+    msg = Message(
+        conversation=conv,
+        sender=request.user,
+        text=text,
+        attachment_type=atype,
+    )
+    if attachment:
+        msg.attachment = attachment
+        msg.attachment_name = attachment.name
+        msg.attachment_size = attachment.size
+
+    msg.save()
+    conv.save()  # updated_at
+
+    # ─── پاسخ ───
+    msg_data = {
+        "id": msg.id,
+        "text": msg.text,
+        "sender": msg.sender.username,
+        "sender_name": msg.sender.get_full_name() or msg.sender.username,
+        "sender_id": msg.sender.id,
+        "is_own": True,
+        "created_at": msg.created_at.strftime("%H:%M"),
+        "attachment": None,
+    }
+    if msg.attachment:
+        msg_data["attachment"] = {
+            "url": msg.attachment.url,
+            "type": msg.attachment_type,
+            "name": msg.attachment_name,
+            "size": msg.attachment_size,
+        }
+
+    return JsonResponse({"ok": True, "message": msg_data})
+
+
+@login_required
+def fetch_messages_view(request, pk):
+    conv = get_object_or_404(Conversation, pk=pk, participants=request.user)
+    try:
+        after_id = int(request.GET.get("after", 0) or 0)
+    except ValueError:
+        after_id = 0
+
+    msgs = (
+        conv.messages
+        .filter(id__gt=after_id)
+        .select_related("sender")
+        .order_by("created_at")
+    )
+
+    result = []
+    for m in msgs:
+        item = {
+            "id": m.id,
+            "text": m.text,
+            "sender": m.sender.username,
+            "sender_name": m.sender.get_full_name() or m.sender.username,
+            "sender_id": m.sender.id,
+            "is_own": m.sender_id == request.user.id,
+            "created_at": m.created_at.strftime("%H:%M"),
+            "attachment": None,
+        }
+        if m.attachment:
+            item["attachment"] = {
+                "url": m.attachment.url,
+                "type": m.attachment_type,
+                "name": m.attachment_name,
+                "size": m.attachment_size,
+            }
+        result.append(item)
+
+    # mark as read
+    last_msg = conv.messages.order_by("-id").first()
+    if last_msg:
+        read, _ = ConversationRead.objects.get_or_create(
+            conversation=conv, user=request.user
+        )
+        if last_msg.id > read.last_read_message_id:
+            read.last_read_message_id = last_msg.id
+            read.save(update_fields=["last_read_message_id", "updated_at"])
+
+    return JsonResponse({"ok": True, "messages": result})
+    
+@login_required
+def unread_count_view(request):
+    """تعداد کل پیام‌های خوانده‌نشده کاربر در همه گفتگوها"""
+    convs = Conversation.objects.filter(participants=request.user)
+    total = 0
+    details = []
+
+    for conv in convs:
+        read = ConversationRead.objects.filter(
+            conversation=conv, user=request.user
+        ).first()
+        last_id = read.last_read_message_id if read else 0
+
+        unread_qs = conv.messages.filter(id__gt=last_id).exclude(sender=request.user)
+        count = unread_qs.count()
+
+        if count > 0:
+            total += count
+            last = unread_qs.order_by("-created_at").first()
+
+            # نام نمایشی
+            if conv.is_group and conv.name:
+                name = conv.name
+            else:
+                others = conv.participants.exclude(pk=request.user.pk)
+                if others.exists():
+                    o = others.first()
+                    name = o.get_full_name() or o.username
+                else:
+                    name = "گفتگو"
+
+            details.append({
+                "conversation_id": conv.pk,
+                "conversation_name": name,
+                "count": count,
+                "last_text": last.text[:60] if last else "",
+                "last_sender": (last.sender.get_full_name() or last.sender.username) if last else "",
+            })
+
+    return JsonResponse({"ok": True, "total": total, "details": details})

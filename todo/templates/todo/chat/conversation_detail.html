@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+{% block title %}{{ display_name }}{% endblock %}
+{% block breadcrumb %}چت{% endblock %}
+
+{% block content %}
+<div class="page__header">
+    <div>
+        <h1 class="page__title">چت سازمانی</h1>
+        <p class="page__subtitle">گفتگو با همکاران</p>
+    </div>
+    <div class="page__actions">
+        <a href="{% url 'users' %}" class="btn btn--secondary">
+            <i class="ti ti-plus"></i>
+            گفتگوی جدید
+        </a>
+    </div>
+</div>
+
+<div class="chat-layout">
+
+    <!-- لیست گفتگوها -->
+    <div class="chat-sidebar">
+        <div class="chat-sidebar__header">
+            <span class="chat-sidebar__title">گفتگوها</span>
+        </div>
+        <div class="chat-sidebar__list">
+            {% for item in all_conversations %}
+                <a href="{% url 'conversation_detail' item.conv.pk %}"
+                   class="chat-item {% if item.conv.pk == conversation.pk %}is-active{% endif %}">
+                    <span class="avatar">
+                        {% if item.conv.is_group %}
+                            <i class="ti ti-users" style="font-size:16px;"></i>
+                        {% else %}
+                            {{ item.display_name|first|upper }}
+                        {% endif %}
+                    </span>
+                    <div class="chat-item__body">
+                        <div class="chat-item__name">{{ item.display_name }}</div>
+                        {% if item.last_message %}
+                            <div class="chat-item__last">{{ item.last_message.text|default:"[فایل]"|truncatechars:35 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="chat-item__right">
+                        {% if item.unread %}
+                            <span class="chat-item__unread">{{ item.unread }}</span>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- پنجره چت -->
+    <div class="chat-window" id="chat-window" data-conv-id="{{ conversation.pk }}">
+
+        <div class="chat-window__header">
+            <span class="avatar">
+                {% if other_user and other_user.userprofile.profile_image %}
+                    <img src="{{ other_user.userprofile.profile_image.url }}"
+                         style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                {% else %}
+                    {{ display_name|first|upper }}
+                {% endif %}
+            </span>
+            <div class="chat-window__header-info">
+                <div class="chat-window__header-name">{{ display_name }}</div>
+                <div class="chat-window__header-status">آنلاین</div>
+            </div>
+            {% if other_user %}
+                <a href="{% url 'user_detail' other_user.pk %}" class="icon-btn" title="پروفایل">
+                    <i class="ti ti-user-circle"></i>
+                </a>
+            {% endif %}
+        </div>
+
+        <div class="chat-window__body" id="chat-body">
+            {% for msg in messages_list %}
+                <div class="message {% if msg.sender.pk == user.pk %}message--own{% endif %}" data-id="{{ msg.id }}">
+                    <div class="message__bubble">
+                        {% if msg.text %}<div style="white-space:pre-wrap;">{{ msg.text }}</div>{% endif %}
+                        {% if msg.attachment %}
+                            {% if msg.attachment_type == 'image' %}
+                                <a href="{{ msg.attachment.url }}" target="_blank" class="msg-attachment">
+                                    <img src="{{ msg.attachment.url }}" alt="{{ msg.attachment_name }}" class="msg-image" loading="lazy">
+                                </a>
+                            {% elif msg.attachment_type == 'video' %}
+                                <video src="{{ msg.attachment.url }}" controls class="msg-video" preload="metadata"></video>
+                            {% elif msg.attachment_type == 'audio' %}
+                                <audio src="{{ msg.attachment.url }}" controls class="msg-audio" preload="metadata"></audio>
+                            {% else %}
+                                <a href="{{ msg.attachment.url }}" download="{{ msg.attachment_name }}" class="msg-file">
+                                    <i class="ti ti-file"></i>
+                                    <div class="msg-file__info">
+                                        <div class="msg-file__name">{{ msg.attachment_name }}</div>
+                                        <div class="msg-file__size">{{ msg.attachment_size|filesizeformat }}</div>
+                                    </div>
+                                    <i class="ti ti-download"></i>
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="message__time">{{ msg.created_at|date:"H:i" }}</div>
+                </div>
+            {% empty %}
+                <div class="chat-window__empty">
+                    <i class="ti ti-message-circle"></i>
+                    <p>اولین پیام را بفرستید</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- پیش‌نمایش فایل -->
+        <div id="file-preview" class="file-preview" style="display:none;"></div>
+
+        <div class="chat-window__footer">
+            <button type="button" class="chat-attach-btn" id="chat-attach-btn" title="پیوست فایل">
+                <i class="ti ti-paperclip"></i>
+            </button>
+            <input type="file" id="chat-file" hidden
+                   accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.txt">
+            <textarea id="chat-input" class="chat-input"
+                      placeholder="پیام خود را بنویسید... (Enter ارسال، Shift+Enter خط جدید)"
+                      rows="1"></textarea>
+            <button id="chat-send-btn" class="chat-send-btn" type="button" title="ارسال">
+                <i class="ti ti-send"></i>
+            </button>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    'use strict';
+
+    const convId = document.getElementById('chat-window').dataset.convId;
+    const body = document.getElementById('chat-body');
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send-btn');
+    const fileInput = document.getElementById('chat-file');
+    const attachBtn = document.getElementById('chat-attach-btn');
+    const preview = document.getElementById('file-preview');
+
+    // ✅ اتصال دکمه گیره به input فایل
+    if (attachBtn && fileInput) {
+        attachBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            fileInput.click();
+        });
+    }
+
+    let selectedFile = null;
+    let lastId = 0;
+
+    document.querySelectorAll('.message').forEach(m => {
+        const id = parseInt(m.dataset.id, 10);
+        if (id > lastId) lastId = id;
+    });
+
+    function scrollBottom() { body.scrollTop = body.scrollHeight; }
+    scrollBottom();
+
+    function getCSRF() {
+        const v = `; ${document.cookie}`;
+        const p = v.split('; csrftoken=');
+        if (p.length === 2) return p.pop().split(';').shift();
+        return '';
+    }
+
+    function escapeHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function buildAttachment(att) {
+        const wrap = document.createElement('div');
+
+        if (att.type === 'image') {
+            const a = document.createElement('a');
+            a.href = att.url;
+            a.target = '_blank';
+            a.className = 'msg-attachment';
+            const img = document.createElement('img');
+            img.src = att.url;
+            img.alt = att.name;
+            img.className = 'msg-image';
+            img.loading = 'lazy';
+            a.appendChild(img);
+            wrap.appendChild(a);
+        } else if (att.type === 'video') {
+            const v = document.createElement('video');
+            v.src = att.url;
+            v.controls = true;
+            v.className = 'msg-video';
+            v.preload = 'metadata';
+            wrap.appendChild(v);
+        } else if (att.type === 'audio') {
+            const a = document.createElement('audio');
+            a.src = att.url;
+            a.controls = true;
+            a.className = 'msg-audio';
+            a.preload = 'metadata';
+            wrap.appendChild(a);
+        } else {
+            const a = document.createElement('a');
+            a.href = att.url;
+            a.download = att.name;
+            a.className = 'msg-file';
+            a.innerHTML = `
+                <i class="ti ti-file"></i>
+                <div class="msg-file__info">
+                    <div class="msg-file__name">${escapeHtml(att.name)}</div>
+                    <div class="msg-file__size">${formatSize(att.size)}</div>
+                </div>
+                <i class="ti ti-download"></i>
+            `;
+            wrap.appendChild(a);
+        }
+
+        return wrap;
+    }
+
+    function renderMessage(m) {
+        const wrap = document.createElement('div');
+        wrap.className = 'message ' + (m.is_own ? 'message--own' : '');
+        wrap.dataset.id = m.id;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'message__bubble';
+
+        if (m.text) {
+            const txt = document.createElement('div');
+            txt.style.whiteSpace = 'pre-wrap';
+            txt.textContent = m.text;
+            bubble.appendChild(txt);
+        }
+
+        if (m.attachment) {
+            bubble.appendChild(buildAttachment(m.attachment));
+        }
+
+        const time = document.createElement('div');
+        time.className = 'message__time';
+        time.textContent = m.created_at;
+
+        wrap.appendChild(bubble);
+        wrap.appendChild(time);
+        body.appendChild(wrap);
+
+        if (m.id > lastId) lastId = m.id;
+    }
+
+    // انتخاب فایل
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        const MAX = 50 * 1024 * 1024;
+        if (file.size > MAX) {
+            window.showToast?.('حجم فایل بیش از ۵۰ مگابایت است', 'danger');
+            fileInput.value = '';
+            return;
+        }
+
+        selectedFile = file;
+        showPreview(file);
+    });
+
+    function showPreview(file) {
+        const type = file.type || '';
+        let icon = 'ti-file';
+        if (type.startsWith('image/')) icon = 'ti-photo';
+        else if (type.startsWith('video/')) icon = 'ti-video';
+        else if (type.startsWith('audio/')) icon = 'ti-music';
+
+        preview.innerHTML = `
+            <div class="file-preview__item">
+                <i class="ti ${icon}" style="font-size:26px;color:var(--brand-500);"></i>
+                <div class="file-preview__info">
+                    <div class="file-preview__name">${escapeHtml(file.name)}</div>
+                    <div class="file-preview__size">${formatSize(file.size)}</div>
+                </div>
+                <button class="file-preview__remove" type="button" title="حذف">
+                    <i class="ti ti-x"></i>
+                </button>
+            </div>
+        `;
+        preview.style.display = 'block';
+
+        preview.querySelector('.file-preview__remove').addEventListener('click', () => {
+            selectedFile = null;
+            fileInput.value = '';
+            preview.style.display = 'none';
+            preview.innerHTML = '';
+        });
+    }
+
+    async function sendMessage() {
+        const text = input.value.trim();
+        if (!text && !selectedFile) return;
+
+        sendBtn.disabled = true;
+
+        try {
+            const formData = new FormData();
+            if (text) formData.append('text', text);
+            if (selectedFile) formData.append('attachment', selectedFile);
+
+            const res = await fetch(`/chat/${convId}/send/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCSRF() },
+                body: formData,
+            });
+
+            const data = await res.json();
+            if (data.ok) {
+                const empty = body.querySelector('.chat-window__empty');
+                if (empty) empty.remove();
+
+                renderMessage(data.message);
+
+                input.value = '';
+                input.style.height = 'auto';
+                selectedFile = null;
+                fileInput.value = '';
+                preview.style.display = 'none';
+                preview.innerHTML = '';
+                scrollBottom();
+            } else {
+                window.showToast?.(data.error || 'خطا در ارسال', 'danger');
+            }
+        } catch (e) {
+            window.showToast?.('خطا در ارتباط با سرور', 'danger');
+        } finally {
+            sendBtn.disabled = false;
+            input.focus();
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+
+    async function pollNew() {
+        try {
+            const res = await fetch(`/chat/${convId}/messages/?after=${lastId}`);
+            const data = await res.json();
+            if (data.ok && data.messages.length) {
+                data.messages.forEach(renderMessage);
+                scrollBottom();
+            }
+        } catch (e) {}
+    }
+
+    setInterval(pollNew, 3000);
+})();
+</script>
+{% endblock %}

@@ -3,10 +3,11 @@ from . import views
 
 
 urlpatterns = [
-	path('', views.TodoListView.as_view(), name='todos'),
-	path('create_task/', views.CreateTaskView.as_view(), name='create_task'),
-	path('delete_task/<int:pk>/', views.DeleteTaskView.as_view(), name='delete_task'),
-	path('edit_task/<int:pk>/', views.UpdateTaskView.as_view(), name='edit_task'),
+    path('', views.TodoListView.as_view(), name='todos'),
+    path('create_task/', views.CreateTaskView.as_view(), name='create_task'),
+    path('delete_task/<int:pk>/', views.DeleteTaskView.as_view(), name='delete_task'),
+    path('edit_task/<int:pk>/', views.UpdateTaskView.as_view(), name='edit_task'),
+    path('task/<int:pk>/status/', views.update_task_status, name='update_task_status'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_view, name='register'),
@@ -14,5 +15,12 @@ urlpatterns = [
     path('edit_profile/<int:pk>', views.EditProfileView.as_view(), name='edit_profile'),
     path('users/', views.UsersListView.as_view(), name='users'),
     path('users/<int:pk>', views.UserDetailView.as_view(), name='user_detail'),
-    path('task/<int:pk>/status/', views.update_task_status, name='update_task_status'),
+
+    # Chat
+    path('chat/', views.ConversationListView.as_view(), name='conversation_list'),
+    path('chat/<int:pk>/', views.ConversationDetailView.as_view(), name='conversation_detail'),
+    path('chat/start/<int:user_id>/', views.start_conversation_view, name='start_conversation'),
+    path('chat/<int:pk>/send/', views.send_message_view, name='send_message'),
+    path('chat/<int:pk>/messages/', views.fetch_messages_view, name='fetch_messages'),
+    path('chat/unread/', views.unread_count_view, name='unread_count'),
 ]
